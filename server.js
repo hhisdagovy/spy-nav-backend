@@ -1,4 +1,3 @@
-// backend/server.js
 require('dotenv').config()
 
 const express = require('express')
@@ -46,7 +45,7 @@ const WEIGHTS = {
 const fetchWithRetry = async (url, retries = 5, delay = 2000) => {
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await axios.get(url, { timeout: 10000 }) // Increased timeout
+      const response = await axios.get(url, { timeout: 10000 })
       return response
     } catch (err) {
       if (i === retries - 1) throw err
@@ -62,7 +61,7 @@ app.get('/', (_req, res) => {
   res.json({ status: 'OK' })
 })
 
-app.get('/api/spy-nav/?', async (_req, res) => {
+app.get('/api/spy-nav', async (_req, res) => { // Removed ? modifier
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
@@ -89,7 +88,7 @@ app.get('/api/spy-nav/?', async (_req, res) => {
   }
 })
 
-app.get('/api/spy-price/?', async (_req, res) => {
+app.get('/api/spy-price', async (_req, res) => { // Removed ? modifier
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
