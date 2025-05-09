@@ -13,7 +13,12 @@ const API_KEY = process.env.FINNHUB_API_KEY
 const BASE_URL = 'https://finnhub.io/api/v1/quote'
 const HISTORY_FILE = path.join(__dirname, 'history.json')
 
-// Middleware
+// Middleware to log all incoming requests
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url} from ${req.headers.origin}`)
+  next()
+})
+
 app.use(cors({ origin: ['https://spy-nav-frontend.vercel.app', 'http://localhost:3000'] }))
 app.use(express.json())
 
