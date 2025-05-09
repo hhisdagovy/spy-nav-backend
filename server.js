@@ -15,7 +15,7 @@ const HISTORY_FILE = path.join(__dirname, 'history.json')
 
 // Middleware to log all incoming requests
 app.use((req, res, next) => {
-  console.log(`Incoming request: ${req.method} ${req.url} from ${req.headers.origin}`)
+  console.log(`Incoming request: ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`)
   next()
 })
 
@@ -43,14 +43,14 @@ const WEIGHTS = {
 }
 
 // Retry helper for Finnhub API calls
-const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
+const fetchWithRetry = async (url, retries = 5, delay = 2000) => {
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await axios.get(url, { timeout: 5000 })
+      const response = await axios.get(url, { timeout: 10000 }) // Increased timeout
       return response
     } catch (err) {
       if (i === retries - 1) throw err
-      console.warn(`Retrying request (${i + 1}/${retries}): ${url}`, err.message)
+      console.warn(`Retrying request (${i + 1}/${retries}): ${url}, Error: ${err.message}`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
@@ -62,7 +62,7 @@ app.get('/', (_req, res) => {
   res.json({ status: 'OK' })
 })
 
-app.get('/api/spy-nav', async (_req, res) => {
+app.get('/api/spy-nav/?', async (_req, res) => {
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
@@ -80,14 +80,16 @@ app.get('/api/spy-nav', async (_req, res) => {
     const finalNav = parseFloat((nav * 10).toFixed(2))
     saveHistory({ time: new Date().toISOString(), nav: finalNav })
     console.log(`Computed NAV: ${finalNav}, Saved to history`)
-    res.json({ nav: finalNav })
+    res.status(200).json({ nav: finalNav })
+    console.log('Sent response: 200 OK with', { nav: finalNav })
   } catch (err) {
-    console.error('Error computing NAV:', err.message)
+    console.error('Error computing NAV:', err.message, err.response?.data)
     res.status(500).json({ error: 'Failed to compute NAV', details: err.message })
+    console.log('Sent response: 500 Internal Server Error')
   }
 })
 
-app.get('/api/spy-price', async (_req, res) => {
+app.get('/api/spy-price/?', async (_req, res) => {
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
@@ -98,28 +100,39 @@ app.get('/api/spy-price', async (_req, res) => {
     const { data } = await fetchWithRetry(url)
     if (!data.c) throw new Error('Invalid price data for SPY')
     console.log(`Fetched SPY price: ${data.c}`)
-    res.json({ price: data.c })
+    res.status(200).json({ price: data.c })
+    console.log('Sent response: 200 OK with', { price: data.c })
   } catch (err) {
-    console.error('Error fetching SPY price:', err.message)
+    console.error('Error fetching SPY price:', err.message, err.response?.data)
     res.status(500).json({ error: 'Failed to fetch SPY price', details: err.message })
+    console.log('Sent response: 500 Internal Server Error')
   }
 })
 
 app.get('/api/spy-history', (_req, res) => {
   const history = getHistory()
   console.log(`Returning history with ${history.length} entries`)
-  res.json(history)
+  res.status(200).json(history)
+  console.log('Sent response: 200 OK with history')
 })
 
 app.delete('/api/spy-history', (_req, res) => {
   try {
     fs.writeFileSync(HISTORY_FILE, JSON.stringify([]))
     console.log('History reset')
-    res.json({ message: 'History reset' })
+    res.status(200).json({ message: 'History reset' })
+    console.log('Sent response: 200 OK with history reset')
   } catch (err) {
     console.error('Error resetting history:', err)
     res.status(500).json({ error: 'Failed to reset history' })
+    console.log('Sent response: 500 Internal Server Error')
   }
+})
+
+// Catch-all for 404 errors
+app.use((req, res) => {
+  console.log(`404: No route found for ${req.method} ${req.url}`)
+  res.status(404).json({ error: 'Not Found' })
 })
 
 // Start server with error handling for port in use
