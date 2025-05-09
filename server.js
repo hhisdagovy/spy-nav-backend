@@ -32,6 +32,10 @@ const saveHistory = (entry) => {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(history.slice(-100), null, 2));
 };
 
+app.get('/', (_req, res) => {
+  res.json({ status: 'Backend is alive!' });
+});
+
 app.get('/api/spy-nav', async (_req, res) => {
   if (!API_KEY) return res.status(500).json({ error: 'API key missing' });
 
