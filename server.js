@@ -12,6 +12,13 @@ const API_KEY = process.env.FINNHUB_API_KEY
 const BASE_URL = 'https://finnhub.io/api/v1/quote'
 const HISTORY_FILE = path.join(__dirname, 'history.json')
 
+// Middleware to normalize URLs (remove multiple slashes)
+app.use((req, res, next) => {
+  req.url = req.url.replace(/\/+/g, '/'); // Replace multiple slashes with a single slash
+  console.log(`Normalized URL: ${req.url}`);
+  next();
+});
+
 // Middleware to log all incoming requests
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url} from ${req.headers.origin || 'unknown'}`)
@@ -61,7 +68,7 @@ app.get('/', (_req, res) => {
   res.json({ status: 'OK' })
 })
 
-app.get('/api/spy-nav', async (_req, res) => { // Removed ? modifier
+app.get('/api/spy-nav', async (_req, res) => {
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
@@ -88,7 +95,7 @@ app.get('/api/spy-nav', async (_req, res) => { // Removed ? modifier
   }
 })
 
-app.get('/api/spy-price', async (_req, res) => { // Removed ? modifier
+app.get('/api/spy-price', async (_req, res) => {
   if (!API_KEY) {
     console.error('Finnhub API key missing')
     return res.status(500).json({ error: 'API key missing' })
