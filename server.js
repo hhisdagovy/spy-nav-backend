@@ -14,7 +14,7 @@ const BASE_URL = 'https://finnhub.io/api/v1/quote'
 const HISTORY_FILE = path.join(__dirname, 'history.json')
 
 // Middleware
-app.use(cors({ origin: ['https://spy-nav-frontend.vercel.app', 'http://localhost:3000'] })) // Explicitly allow Vercel and local dev
+app.use(cors({ origin: ['https://spy-nav-frontend.vercel.app', 'http://localhost:3000'] }))
 app.use(express.json())
 
 // Helper functions
@@ -45,14 +45,17 @@ const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
       return response
     } catch (err) {
       if (i === retries - 1) throw err
-      console.warn(`Retrying request (${i + 1}/${retries}): ${url}`)
+      console.warn(`Retrying request (${i + 1}/${retries}): ${url}`, err.message)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
 }
 
 // Routes
-app.get('/', (_req, res) => res.json({ status: 'OK' }))
+app.get('/', (_req, res) => {
+  console.log('Health check requested')
+  res.json({ status: 'OK' })
+})
 
 app.get('/api/spy-nav', async (_req, res) => {
   if (!API_KEY) {
@@ -67,9 +70,11 @@ app.get('/api/spy-nav', async (_req, res) => {
       const { data } = await fetchWithRetry(url)
       if (!data.c) throw new Error(`Invalid price data for ${ticker}`)
       nav += data.c * weight
+      console.log(`Fetched ${ticker} price: ${data.c}`)
     }
     const finalNav = parseFloat((nav * 10).toFixed(2))
     saveHistory({ time: new Date().toISOString(), nav: finalNav })
+    console.log(`Computed NAV: ${finalNav}, Saved to history`)
     res.json({ nav: finalNav })
   } catch (err) {
     console.error('Error computing NAV:', err.message)
@@ -87,6 +92,7 @@ app.get('/api/spy-price', async (_req, res) => {
     const url = `${BASE_URL}?symbol=SPY&token=${API_KEY}`
     const { data } = await fetchWithRetry(url)
     if (!data.c) throw new Error('Invalid price data for SPY')
+    console.log(`Fetched SPY price: ${data.c}`)
     res.json({ price: data.c })
   } catch (err) {
     console.error('Error fetching SPY price:', err.message)
@@ -94,11 +100,16 @@ app.get('/api/spy-price', async (_req, res) => {
   }
 })
 
-app.get('/api/spy-history', (_req, res) => res.json(getHistory()))
+app.get('/api/spy-history', (_req, res) => {
+  const history = getHistory()
+  console.log(`Returning history with ${history.length} entries`)
+  res.json(history)
+})
 
 app.delete('/api/spy-history', (_req, res) => {
   try {
     fs.writeFileSync(HISTORY_FILE, JSON.stringify([]))
+    console.log('History reset')
     res.json({ message: 'History reset' })
   } catch (err) {
     console.error('Error resetting history:', err)
