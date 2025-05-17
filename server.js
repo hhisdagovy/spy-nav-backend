@@ -10,7 +10,6 @@ const app = express()
 const PORT = process.env.PORT || 5051
 const API_KEY = process.env.FINNHUB_API_KEY
 const BASE_URL = 'https://finnhub.io/api/v1/quote'
-const HISTORY_FILE = path.join(__dirname, 'history.json')
 
 // Middleware to normalize URLs (remove multiple slashes)
 app.use((req, res, next) => {
@@ -27,17 +26,6 @@ app.use((req, res, next) => {
 
 app.use(cors({ origin: ['https://spy-nav-frontend.vercel.app', 'http://localhost:3000'] }))
 app.use(express.json())
-
-// Helper functions
-const getHistory = () => fs.existsSync(HISTORY_FILE) 
-  ? JSON.parse(fs.readFileSync(HISTORY_FILE)) 
-  : []
-
-const saveHistory = (entry) => {
-  const history = getHistory()
-  history.push(entry)
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history.slice(-100), null, 2))
-}
 
 // Constants
 const WEIGHTS = {
